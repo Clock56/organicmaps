@@ -9,6 +9,7 @@ buildscript {
   // Unfortunately, the only way to disable Gradle plugins is to add these hardcore switches to buildscript().
   //
 
+
   // Detect flavors from the task name.
   def taskName = getGradle().getStartParameter().getTaskRequests().toString().toLowerCase()
   def isFdroid = taskName.contains('fdroid')
@@ -50,6 +51,19 @@ apply plugin: 'ru.cian.huawei-publish-gradle-plugin'
 
 apply from: "${rootProject.rootDir}/groovy/common-config.gradle"
 apply from: "${rootProject.rootDir}/groovy/permission-checker.gradle"
+
+
+android {
+    ndkVersion "25.2.9519653"
+
+    externalNativeBuild {
+        cmake {
+            version "3.22.1"
+        }
+    }
+}
+
+
 
 import com.github.triplet.gradle.androidpublisher.ReleaseStatus
 import ru.cian.huawei.publish.ReleaseNote
