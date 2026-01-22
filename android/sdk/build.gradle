@@ -1,5 +1,6 @@
 plugins {
   id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
 }
 
 apply from: "${rootProject.rootDir}/groovy/common-config.gradle"
@@ -85,10 +86,14 @@ android {
   compileOptions {
     coreLibraryDesugaringEnabled = true
   }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
 
 dependencies {
-  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+  implementation 'androidx.core:core-ktx:1.17.0'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 
   implementation 'androidx.annotation:annotation:1.9.1'
   implementation 'androidx.core:core:1.17.0'

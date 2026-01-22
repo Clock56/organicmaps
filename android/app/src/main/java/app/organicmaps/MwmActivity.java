@@ -128,6 +128,12 @@ import app.organicmaps.widget.placepage.PlacePageViewModel;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.ArrayList;
 import java.util.Objects;
+import app.organicmaps.util.telemetry.NavTelemetryCollector;
+import app.organicmaps.util.telemetry.NavTelemetryCollector;
+import app.organicmaps.util.telemetry.NavTelemetryCollector;
+import app.organicmaps.util.telemetry.NavTelemetryCollector;
+import app.organicmaps.util.telemetry.NavTelemetryCollector;
+import app.organicmaps.util.telemetry.NavTelemetryCollector;
 
 public class MwmActivity extends BaseMwmFragmentActivity
     implements PlacePageActivationListener, MapRenderingListener, RoutingController.Container, LocationListener,
@@ -1070,6 +1076,10 @@ public class MwmActivity extends BaseMwmFragmentActivity
     refreshLightStatusBar();
 
     MwmApplication.from(this).getSensorHelper().addListener(this);
+
+      // ⬇⬇⬇ ADD THIS LINE HERE ⬇⬇⬇
+      NavTelemetryCollector.INSTANCE.onAppResumed();
+
   }
 
   @Override
@@ -1082,11 +1092,13 @@ public class MwmActivity extends BaseMwmFragmentActivity
   @Override
   protected void onPause()
   {
+      NavTelemetryCollector.INSTANCE.onAppPaused();
     if (mOnmapDownloader != null)
       mOnmapDownloader.onPause();
     MwmApplication.from(this).getSensorHelper().removeListener(this);
     dismissLocationErrorDialog();
     dismissAlertDialog();
+
     super.onPause();
   }
 
