@@ -1059,6 +1059,8 @@ public class MwmActivity extends BaseMwmFragmentActivity
   protected void onResume()
   {
     super.onResume();
+  
+
     ThemeSwitcher.INSTANCE.synchronizeApplicationTheme();
     ThemeSwitcher.INSTANCE.synchronizeMapStyle(this, mMapController.isRenderingActive());
     refreshSearchToolbar();
@@ -2394,6 +2396,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
     if (level >= TRIM_MEMORY_RUNNING_LOW && level != TRIM_MEMORY_UI_HIDDEN)
       Framework.nativeMemoryWarning();
   }
+
 
   private void makeNavigationBarTransparentInLightMode()
   {

@@ -1,9 +1,9 @@
 package app.organicmaps.util.telemetry
 import app.organicmaps.util.telemetry.NavTelemetrySender
-
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+
 
 /**
  * Central telemetry coordinator.
@@ -35,6 +35,38 @@ object NavTelemetryCollector {
         appActive = false
         stopIdleTelemetry()
     }
+
+
+// ------------------------------------------------------------
+// ROUTING TELEMETRY (called from NavigationService)
+// ------------------------------------------------------------
+
+@JvmStatic
+fun onRoutingUpdated(
+    distanceToDestinationM: Double,
+    etaSeconds: Long
+) {
+    if (!appActive)
+        return
+
+    val snapshot = NavTelemetrySnapshot(
+        timestampMs = System.currentTimeMillis(),
+        appAlive = true,
+
+        gpsValid = true,
+        latitude = null,
+        longitude = null,
+        speedMps = null,
+        headingDeg = null,
+
+        navigating = true,
+        distanceToDestinationM = distanceToDestinationM,
+        etaSeconds = etaSeconds
+    )
+
+    NavTelemetrySender.send(snapshot)
+}
+
 
     // ------------------------------------------------------------
     // IDLE TELEMETRY LOOP
