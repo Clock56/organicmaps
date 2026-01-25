@@ -5,7 +5,7 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static app.organicmaps.sdk.util.Constants.Vendor.XIAOMI;
-import app.organicmaps.util.telemetry.NavTelemetryCollector;
+
 
 import android.annotation.SuppressLint;
 import android.app.NotificationManager;
@@ -269,7 +269,7 @@ public class NavigationService extends Service implements LocationListener
     final RoutingController routingController = RoutingController.get();
     if (!routingController.isNavigating())
       return;
-NavTelemetryCollector.onRoutingUpdated(routingInfo);
+
 
     // Voice the turn notification first.
     final String[] turnNotifications = Framework.nativeGenerateNotifications(Config.TTS.getAnnounceStreets());
@@ -290,14 +290,11 @@ NavTelemetryCollector.onRoutingUpdated(routingInfo);
     }
 
     final RoutingInfo routingInfo = Framework.nativeGetRouteFollowingInfo();
-    NavTelemetryCollector.onRoutingUpdated(routingInfo);
+
 
     if (routingInfo == null)
       return;
-NavTelemetryCollector.onRoutingUpdated(
-    routingInfo.distToTarget.getMeters(),
-    routingInfo.totalTimeSec
-);
+
 
     if (routingInfo.shouldPlayWarningSignal())
       mPlayer.playback(R.raw.speed_cams_beep);

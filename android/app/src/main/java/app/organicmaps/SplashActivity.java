@@ -56,7 +56,7 @@ public class SplashActivity extends AppCompatActivity
   protected void onCreate(@Nullable Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
-    UdpTestSender.sendOnce();
+    
 
     UiThread.cancelDelayedTasks(mInitCoreDelayedTask);
     setContentView(R.layout.activity_splash);
