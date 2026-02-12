@@ -9,6 +9,10 @@ import static app.organicmaps.sdk.location.LocationState.FOLLOW_AND_ROTATE;
 import static app.organicmaps.sdk.location.LocationState.LOCATION_TAG;
 import static app.organicmaps.sdk.util.PowerManagment.POWER_MANAGEMENT_TAG;
 import static app.organicmaps.sdk.util.Utils.dimen;
+import app.organicmaps.util.telemetry.TelemetryTicker;
+import app.organicmaps.sdk.routing.RoutingInfo;
+import app.organicmaps.sdk.util.Distance;
+
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -1054,7 +1058,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
   protected void onResume()
   {
     super.onResume();
-  
+  TelemetryTicker.INSTANCE.start(this);
 
     ThemeSwitcher.INSTANCE.synchronizeApplicationTheme();
     ThemeSwitcher.INSTANCE.synchronizeMapStyle(this, mMapController.isRenderingActive());
@@ -1093,6 +1097,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
     MwmApplication.from(this).getSensorHelper().removeListener(this);
     dismissLocationErrorDialog();
     dismissAlertDialog();
+TelemetryTicker.INSTANCE.stop();
 
     super.onPause();
   }
@@ -1789,18 +1794,86 @@ public class MwmActivity extends BaseMwmFragmentActivity
    * Called when location is updated.
    * @param location new location
    */
-  @Override
-  @UiThread
-  public void onLocationUpdated(@NonNull Location location)
-  {
-    dismissLocationErrorDialog();
+@Override
+@UiThread
+public void onLocationUpdated(@NonNull Location location)
+{
+    // Always update basic telemetry
+    app.organicmaps.util.telemetry.TelemetryTicker.INSTANCE.updateLocation(location);
 
     final RoutingController routing = RoutingController.get();
-    if (!routing.isNavigating())
-      return;
+    boolean navigating = routing.isNavigating();
 
-    mNavigationController.update(Framework.nativeGetRouteFollowingInfo());
-  }
+    TelemetryTicker.INSTANCE.setNavActive(navigating);
+
+    dismissLocationErrorDialog();
+
+    if (!navigating)
+    {
+        TelemetryTicker.INSTANCE.setRoutingData(null, null, null);
+        return;
+    }
+
+    final RoutingInfo info = Framework.nativeGetRouteFollowingInfo();
+
+    if (info != null)
+    {
+        Integer distanceToTurnM = null;
+        Integer timeToTurnS = null;
+        String turnType = null;
+
+if (info.distToTurn != null && info.distToTurn.isValid())
+{
+    final double v = info.distToTurn.mDistance;
+    final Distance.Units u = info.distToTurn.mUnits;
+
+    double meters;
+    switch (u)
+    {
+        case Meters:
+            meters = v;
+            break;
+        case Kilometers:
+            meters = v * 1000.0;
+            break;
+        case Miles:
+            meters = v * 1609.344;
+            break;
+        case Feet:
+            meters = v * 0.3048;
+            break;
+        default:
+            meters = v; // safe fallback
+            break;
+    }
+
+    distanceToTurnM = (int) Math.round(meters);
+}
+
+
+        // Use totalTimeInSeconds as a safe approximation for now
+        if (info.totalTimeInSeconds > 0)
+            timeToTurnS = info.totalTimeInSeconds;
+
+        if (info.carDirection != null)
+            turnType = info.carDirection.name();
+
+        TelemetryTicker.INSTANCE.setRoutingData(
+                distanceToTurnM,
+                timeToTurnS,
+                turnType
+        );
+    }
+    else
+    {
+        TelemetryTicker.INSTANCE.setRoutingData(null, null, null);
+    }
+
+    mNavigationController.update(info);
+}
+
+
+
 
   @Override
   @UiThread
