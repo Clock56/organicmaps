@@ -1811,10 +1811,14 @@ public void onLocationUpdated(@NonNull Location location)
     // If not navigating, clear routing telemetry and exit
     if (!navigating)
     {
-        TelemetryTicker.INSTANCE.setRoutingData(
-                null, null, null,
-                null, null, null
-        );
+TelemetryTicker.INSTANCE.setRoutingData(
+        null, null, null,
+        null,
+        null, null,
+        null,
+        null, null, null
+);
+
         return;
     }
 
@@ -1827,6 +1831,11 @@ public void onLocationUpdated(@NonNull Location location)
         Integer distanceToTurnM = null;
         Integer timeToTurnS = null;
         String turnType = null;
+		Integer roundaboutExit = null;
+        String currentRoad = null;
+        String nextRoad = null;
+        Double speedLimitMps = null;
+
 
         // ----- TURN DISTANCE -----
         if (info.distToTurn != null && info.distToTurn.isValid())
@@ -1860,6 +1869,8 @@ public void onLocationUpdated(@NonNull Location location)
         // ----- TURN TYPE -----
         if (info.carDirection != null)
             turnType = info.carDirection.name();
+if (info.exitNum > 0)
+    roundaboutExit = info.exitNum;
 
         // ----- TIME TO TURN (distance / speed) -----
         if (distanceToTurnM != null && location.hasSpeed() && location.getSpeed() > 0.5f)
@@ -1909,15 +1920,35 @@ public void onLocationUpdated(@NonNull Location location)
             etaEpochS = nowEpochS + timeToDestinationS;
         }
 
+// Current road
+if (info.currentStreet != null && !info.currentStreet.isEmpty())
+    currentRoad = info.currentStreet;
+
+// Next road
+if (info.nextStreet != null && !info.nextStreet.isEmpty())
+    nextRoad = info.nextStreet;
+
+// Speed limit
+if (info.speedLimitMps >= 0)
+    speedLimitMps = info.speedLimitMps;
+
+
+
         // ----- FINAL TELEMETRY UPDATE -----
-        TelemetryTicker.INSTANCE.setRoutingData(
-                distanceToTurnM,
-                timeToTurnS,
-                turnType,
-                distanceToDestinationM,
-                timeToDestinationS,
-                etaEpochS
-        );
+TelemetryTicker.INSTANCE.setRoutingData(
+        distanceToTurnM,
+        timeToTurnS,
+        turnType,
+        roundaboutExit,
+        currentRoad,
+        nextRoad,
+        speedLimitMps,
+        distanceToDestinationM,
+        timeToDestinationS,
+        etaEpochS
+);
+
+
     }
 
     // IMPORTANT: Do NOT clear routing data if info == null.
