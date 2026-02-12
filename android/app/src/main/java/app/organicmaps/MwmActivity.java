@@ -1808,13 +1808,19 @@ public void onLocationUpdated(@NonNull Location location)
 
     dismissLocationErrorDialog();
 
+    // If not navigating, clear routing telemetry and exit
     if (!navigating)
     {
-        TelemetryTicker.INSTANCE.setRoutingData(null, null, null);
+        TelemetryTicker.INSTANCE.setRoutingData(
+                null, null, null,
+                null, null, null
+        );
         return;
     }
 
     final RoutingInfo info = Framework.nativeGetRouteFollowingInfo();
+
+
 
     if (info != null)
     {
@@ -1822,58 +1828,103 @@ public void onLocationUpdated(@NonNull Location location)
         Integer timeToTurnS = null;
         String turnType = null;
 
-if (info.distToTurn != null && info.distToTurn.isValid())
-{
-    final double v = info.distToTurn.mDistance;
-    final Distance.Units u = info.distToTurn.mUnits;
+        // ----- TURN DISTANCE -----
+        if (info.distToTurn != null && info.distToTurn.isValid())
+        {
+            final double v = info.distToTurn.mDistance;
+            final Distance.Units u = info.distToTurn.mUnits;
 
-    double meters;
-    switch (u)
-    {
-        case Meters:
-            meters = v;
-            break;
-        case Kilometers:
-            meters = v * 1000.0;
-            break;
-        case Miles:
-            meters = v * 1609.344;
-            break;
-        case Feet:
-            meters = v * 0.3048;
-            break;
-        default:
-            meters = v; // safe fallback
-            break;
-    }
+            double meters;
+            switch (u)
+            {
+                case Meters:
+                    meters = v;
+                    break;
+                case Kilometers:
+                    meters = v * 1000.0;
+                    break;
+                case Miles:
+                    meters = v * 1609.344;
+                    break;
+                case Feet:
+                    meters = v * 0.3048;
+                    break;
+                default:
+                    meters = v;
+                    break;
+            }
 
-    distanceToTurnM = (int) Math.round(meters);
-}
+            distanceToTurnM = (int) Math.round(meters);
+        }
 
-
-        // Use totalTimeInSeconds as a safe approximation for now
-        if (info.totalTimeInSeconds > 0)
-            timeToTurnS = info.totalTimeInSeconds;
-
+        // ----- TURN TYPE -----
         if (info.carDirection != null)
             turnType = info.carDirection.name();
 
+        // ----- TIME TO TURN (distance / speed) -----
+        if (distanceToTurnM != null && location.hasSpeed() && location.getSpeed() > 0.5f)
+        {
+            timeToTurnS = (int) Math.round(distanceToTurnM / location.getSpeed());
+        }
+
+        // ----- DESTINATION DISTANCE -----
+        Integer distanceToDestinationM = null;
+
+        if (info.distToTarget != null && info.distToTarget.isValid())
+        {
+            final double v = info.distToTarget.mDistance;
+            final Distance.Units u = info.distToTarget.mUnits;
+
+            double meters;
+            switch (u)
+            {
+                case Meters:
+                    meters = v;
+                    break;
+                case Kilometers:
+                    meters = v * 1000.0;
+                    break;
+                case Miles:
+                    meters = v * 1609.344;
+                    break;
+                case Feet:
+                    meters = v * 0.3048;
+                    break;
+                default:
+                    meters = v;
+                    break;
+            }
+
+            distanceToDestinationM = (int) Math.round(meters);
+        }
+
+        // ----- TIME TO DESTINATION + ETA -----
+        Integer timeToDestinationS = null;
+        Long etaEpochS = null;
+
+        if (info.totalTimeInSeconds > 0)
+        {
+            timeToDestinationS = info.totalTimeInSeconds;
+            long nowEpochS = System.currentTimeMillis() / 1000L;
+            etaEpochS = nowEpochS + timeToDestinationS;
+        }
+
+        // ----- FINAL TELEMETRY UPDATE -----
         TelemetryTicker.INSTANCE.setRoutingData(
                 distanceToTurnM,
                 timeToTurnS,
-                turnType
+                turnType,
+                distanceToDestinationM,
+                timeToDestinationS,
+                etaEpochS
         );
     }
-    else
-    {
-        TelemetryTicker.INSTANCE.setRoutingData(null, null, null);
-    }
+
+    // IMPORTANT: Do NOT clear routing data if info == null.
+    // Organic Maps can transiently return null between updates.
 
     mNavigationController.update(info);
 }
-
-
-
 
   @Override
   @UiThread
