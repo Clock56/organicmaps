@@ -1823,7 +1823,16 @@ TelemetryTicker.INSTANCE.setRoutingData(
     }
 
     final RoutingInfo info = Framework.nativeGetRouteFollowingInfo();
-
+// Camera is considered active whenever routing engine reports a valid distance.
+// We intentionally do NOT rely on beep zone for active state.
+/* Toast.makeText(
+    this,
+    "camDist=" + info.getSpeedCamDistanceMeters()
+        + " camKmph=" + info.getSpeedCamSpeedKmph()
+        + " beep=" + info.shouldPlayWarningSignal()
+        + " exc=" + info.isSpeedCamLimitExceeded(),
+    Toast.LENGTH_SHORT
+).show(); */
 
 
     if (info != null)
@@ -1936,16 +1945,23 @@ if (info.speedLimitMps >= 0)
 
         // ----- FINAL TELEMETRY UPDATE -----
 TelemetryTicker.INSTANCE.setRoutingData(
-        distanceToTurnM,
-        timeToTurnS,
-        turnType,
-        roundaboutExit,
-        currentRoad,
-        nextRoad,
-        speedLimitMps,
-        distanceToDestinationM,
-        timeToDestinationS,
-        etaEpochS
+    distanceToTurnM,
+    timeToTurnS,
+    turnType,
+    roundaboutExit,
+    currentRoad,
+    nextRoad,
+    speedLimitMps,
+    distanceToDestinationM,
+    timeToDestinationS,
+    etaEpochS
+);
+
+TelemetryTicker.INSTANCE.setSpeedCameraData(
+    info.getSpeedCamDistanceMeters(),
+    info.getSpeedCamSpeedKmph(),
+    info.shouldPlayWarningSignal(),
+    info.isSpeedCamLimitExceeded()
 );
 
 

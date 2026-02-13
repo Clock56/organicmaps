@@ -10,6 +10,37 @@
 
 jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, RoutingManager & rm)
 {
+  
+  
+double camDistanceMeters = -1.0;
+double camSpeedKmph = -1.0;
+
+auto const & cam = rm.GetSpeedCamManager().GetClosestCamForTests();
+
+if (cam.IsValid())
+{
+  auto routePtr = rm.RoutingSession().GetRouteForTests();
+
+  if (routePtr)
+  {
+    double const passed =
+        routePtr->GetCurrentDistanceFromBeginMeters();
+
+    camDistanceMeters =
+        cam.m_distFromBeginMeters - passed;
+
+    if (camDistanceMeters < 0.0)
+      camDistanceMeters = -1.0;
+  }
+
+  if (cam.m_maxSpeedKmH != routing::SpeedCameraOnRoute::kNoSpeedInfo)
+    camSpeedKmph = cam.m_maxSpeedKmH;
+}
+
+
+
+  
+  
   static jclass const klass = jni::GetGlobalClassRef(env, "app/organicmaps/sdk/routing/RoutingInfo");
   // clang-format off
   static jmethodID const ctorRouteInfoID = jni::GetConstructorID(env, klass,
@@ -31,6 +62,8 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
     "D"                                                        // speedLimitMps
     "Z"                                                        // speedLimitExceeded
     "Z"                                                        // shouldPlayWarningSignal
+	"D"   													   // speedCamDistanceMeters   ← NEW
+    "D"   													   // speedCamSpeedKmph        ← NEW
     ")V"
   );
   // clang-format on
@@ -53,7 +86,9 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
     CreateLanesInfo(env, info.m_lanes),
     info.m_speedLimitMps,
     static_cast<jboolean>(rm.IsSpeedCamLimitExceeded()),
-    static_cast<jboolean>(rm.GetSpeedCamManager().ShouldPlayBeepSignal())
+    static_cast<jboolean>(rm.GetSpeedCamManager().ShouldPlayBeepSignal()),
+    camDistanceMeters,
+    camSpeedKmph
   );
   // clang-format on
   ASSERT(result, (jni::DescribeException()));

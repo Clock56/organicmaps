@@ -44,15 +44,30 @@ public final class RoutingInfo
   public final double speedLimitMps;
   private final boolean speedCamLimitExceeded;
   private final boolean shouldPlayWarningSignal;
+  private final double speedCamDistanceMeters;
+  private final double speedCamSpeedKmph;
 
-  private RoutingInfo(Distance distToTarget, Distance distToTurn, String currentStreet, String nextStreet,
-                      @Nullable RoadShieldInfo nextStreetRoadShields, String nextNextStreet,
-                      @Nullable RoadShieldInfo nextNextStreetRoadShields, double completionPercent,
-                      @NonNull CarDirection carTurnDirection, @NonNull CarDirection carNextTurnDirection,
-                      @NonNull PedestrianDirection pedestrianDirection, int exitNum, int totalTime,
-                      @Nullable LaneInfo[] lanes, double speedLimitMps, boolean speedLimitExceeded,
-                      boolean shouldPlayWarningSignal)
-  {
+
+  private RoutingInfo(Distance distToTarget,
+                    Distance distToTurn,
+                    String currentStreet,
+                    String nextStreet,
+                    @Nullable RoadShieldInfo nextStreetRoadShields,
+                    String nextNextStreet,
+                    @Nullable RoadShieldInfo nextNextStreetRoadShields,
+                    double completionPercent,
+                    @NonNull CarDirection carTurnDirection,
+                    @NonNull CarDirection carNextTurnDirection,
+                    @NonNull PedestrianDirection pedestrianDirection,
+                    int exitNum,
+                    int totalTime,
+                    @Nullable LaneInfo[] lanes,
+                    double speedLimitMps,
+                    boolean speedLimitExceeded,
+                    boolean shouldPlayWarningSignal,
+                    double speedCamDistanceMeters,
+                    double speedCamSpeedKmph)
+{
     this.distToTarget = distToTarget;
     this.distToTurn = distToTurn;
     this.currentStreet = currentStreet;
@@ -70,7 +85,12 @@ public final class RoutingInfo
     this.speedLimitMps = speedLimitMps;
     this.speedCamLimitExceeded = speedLimitExceeded;
     this.shouldPlayWarningSignal = shouldPlayWarningSignal;
-  }
+
+    // NEW
+    this.speedCamDistanceMeters = speedCamDistanceMeters;
+    this.speedCamSpeedKmph = speedCamSpeedKmph;
+}
+
 
   public boolean isSpeedCamLimitExceeded()
   {
@@ -81,6 +101,15 @@ public final class RoutingInfo
   {
     return shouldPlayWarningSignal;
   }
+public double getSpeedCamDistanceMeters()
+{
+    return speedCamDistanceMeters;
+}
+
+public double getSpeedCamSpeedKmph()
+{
+    return speedCamSpeedKmph;
+}
 
   public boolean hasNextNextTurn()
   {

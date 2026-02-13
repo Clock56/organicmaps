@@ -17,12 +17,18 @@ import kotlin.math.roundToInt
  */
 object TelemetryTicker {
     private const val INTERVAL_MS: Long = 2500L
-private var roundaboutExit: Int? = null
+    private var roundaboutExit: Int? = null
+    private var lastTurnGraphicUid: String? = null
+
+private var speedCameraDistanceM: Int? = null
+private var speedCameraSpeedMps: Double? = null
+private var speedCameraActive: Boolean = false
+private var speedCameraExceeded: Boolean = false
 
     private var navActive: Boolean = false
-private var currentRoad: String? = null
-private var nextRoad: String? = null
-private var speedLimitMps: Double? = null
+    private var currentRoad: String? = null
+    private var nextRoad: String? = null
+    private var speedLimitMps: Double? = null
 
     private var distanceToTurnM: Int? = null
     private var timeToTurnS: Int? = null
@@ -50,11 +56,25 @@ private var speedLimitMps: Double? = null
 
             // ---- LOOK-AHEAD (routing-only, safe / no native geometry) ----
             // Relative angle that gradually blends toward the upcoming turn direction as we approach it.
-            val (roadAheadRelDeg, roadAheadConf) =
-                computeRoadAheadRelativeDeg(turnType, distanceToTurnM, navActive)
+			
+val (roadAheadRelDeg, roadAheadConf) =
+    computeRoadAheadRelativeDeg(turnType, distanceToTurnM, navActive)
 
-            val json = """
+// ----- TURN GRAPHIC UID -----
+val currentTurnGraphicUid =
+    if (navActive && turnType != null) {
+        if (roundaboutExit != null && roundaboutExit!! > 0)
+            "${turnType}_exit_$roundaboutExit"
+        else
+            turnType
+    } else {
+        null
+    }
+
+val json = """
 {
+...
+
   "meta": {
     "version": 1,
     "timestamp_ms": $timestampMs,
@@ -75,29 +95,36 @@ private var speedLimitMps: Double? = null
     "time_to_turn_s": ${timeToTurnS ?: "null"},
     "turn_type": ${turnType?.let { "\"$it\"" } ?: "null"},
     "roundabout_exit": ${roundaboutExit ?: "null"},
-"current_road": ${currentRoad?.let { "\"$it\"" } ?: "null"},
-"next_road": ${nextRoad?.let { "\"$it\"" } ?: "null"},
+    "current_road": ${currentRoad?.let { "\"$it\"" } ?: "null"},
+    "next_road": ${nextRoad?.let { "\"$it\"" } ?: "null"},
     "distance_to_destination_m": ${distanceToDestinationM ?: "null"},
     "time_to_destination_s": ${timeToDestinationS ?: "null"},
     "eta_epoch_s": ${etaEpochS ?: "null"}
   },
 
   "turn_graphic": {
-    "present": false,
-    "uid": null,
-    "format": null,
-    "width": null,
-    "height": null
-  },
+  "present": ${if (currentTurnGraphicUid != null) "true" else "false"},
+  "uid": ${currentTurnGraphicUid?.let { "\"$it\"" } ?: "null"},
+  "format": ${if (currentTurnGraphicUid != null) "\"png\"" else "null"},
+  "width": ${if (currentTurnGraphicUid != null) 128 else "null"},
+  "height": ${if (currentTurnGraphicUid != null) 128 else "null"}
+},
 
-  "alerts": {
-    "speed_camera": {
-      "active": false,
-      "distance_m": null,
-      "time_s": null,
-      "speed_limit_mps": null
-    }
-  },
+"alerts": {
+  "speed_camera": {
+    "active": $speedCameraActive,
+    "distance_m": ${speedCameraDistanceM ?: "null"},
+    "time_s": ${
+        if (speedCameraDistanceM != null && speed > 0)
+            (speedCameraDistanceM!! / speed).roundToInt()
+        else
+            "null"
+    },
+    "speed_limit_mps": ${speedCameraSpeedMps ?: "null"},
+    "speed_exceeded": $speedCameraExceeded
+  }
+},
+
 
   "idle": {
     "road_ahead_bearing_deg": ${roadAheadRelDeg ?: "null"},
@@ -110,15 +137,32 @@ private var speedLimitMps: Double? = null
 }
 """.trimIndent()
 
+// ----- TURN GRAPHIC UID GATE (Phase 1 Step 2) -----
+
+
+
+if (currentTurnGraphicUid != null &&
+    currentTurnGraphicUid != lastTurnGraphicUid) {
+
+    lastTurnGraphicUid = currentTurnGraphicUid
+
+    Toast.makeText(
+        appContext,
+        "TURN UID: $currentTurnGraphicUid",
+        Toast.LENGTH_SHORT
+    ).show()
+}
+
+
             // Send UDP
             TelemetryUdpSender.send(json)
 
             // Keep toast for verification
-            Toast.makeText(
-                appContext,
-                "SPD: %.1f  BRG: %d".format(speed, bearing),
-                Toast.LENGTH_SHORT
-            ).show()
+            //Toast.makeText(
+            //    appContext,
+             //   "SPD: %.1f  BRG: %d".format(speed, bearing),
+             //   Toast.LENGTH_SHORT
+            //).show()
 
             handler.postDelayed(this, INTERVAL_MS)
         }
@@ -167,36 +211,56 @@ fun setRoutingData(
     distanceDestM: Int?,
     timeDestS: Int?,
     etaS: Long?
-)
+) {
+    // Always update turn data
+    distanceToTurnM = distanceM
+    timeToTurnS = timeS
+    turnType = type
+    roundaboutExit = roundExit
 
+    currentRoad = currentRoadName
+    nextRoad = nextRoadName
 
-	{
-        // Always update turn data
-distanceToTurnM = distanceM
-timeToTurnS = timeS
-turnType = type
-roundaboutExit = roundExit
+    if (speedLimit != null)
+        speedLimitMps = speedLimit
 
-currentRoad = currentRoadName
-nextRoad = nextRoadName
+    if (distanceDestM != null)
+        distanceToDestinationM = distanceDestM
 
-if (speedLimit != null)
-    speedLimitMps = speedLimit
+    if (timeDestS != null)
+        timeToDestinationS = timeDestS
 
-if (distanceDestM != null)
-    distanceToDestinationM = distanceDestM
+    if (etaS != null)
+        etaEpochS = etaS
+}
 
-if (timeDestS != null)
-    timeToDestinationS = timeDestS
+fun setSpeedCameraData(
+    distanceMeters: Double,
+    speedKmph: Double,
+    active: Boolean,
+    exceeded: Boolean
+) {
+    speedCameraDistanceM =
+        if (distanceMeters >= 0)
+            distanceMeters.roundToInt()
+        else
+            null
 
-if (etaS != null)
-    etaEpochS = etaS
+    speedCameraSpeedMps =
+        if (speedKmph > 0)
+            speedKmph / 3.6
+        else
+            null
 
-    }
+     // Active if camera exists ahead
+    speedCameraActive = distanceMeters >= 0
+    speedCameraExceeded = exceeded
+}
 
-    fun updateLocation(location: Location) {
-        lastLocation = location
-    }
+fun updateLocation(location: Location) {
+    lastLocation = location
+}
+
 
     /**
      * Safe “road-ahead” approximation for routing mode:
