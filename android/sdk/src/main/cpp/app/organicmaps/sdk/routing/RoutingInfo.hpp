@@ -5,6 +5,9 @@
 #include "app/organicmaps/sdk/routing/LaneInfo.hpp"
 #include "app/organicmaps/sdk/routing/PedestrianDirection.hpp"
 #include "app/organicmaps/sdk/routing/roadshield/RoadShieldInfo.hpp"
+#include "geometry/angles.hpp"
+#include "platform/location.hpp"
+#include "base/math.hpp"
 
 #include "map/routing_manager.hpp"
 
@@ -14,6 +17,7 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
   
 double camDistanceMeters = -1.0;
 double camSpeedKmph = -1.0;
+double roadAheadBearingDeg = -1.0;
 
 auto const & cam = rm.GetSpeedCamManager().GetClosestCamForTests();
 
@@ -38,6 +42,22 @@ if (cam.IsValid())
 }
 
 
+auto routePtr = rm.RoutingSession().GetRouteForTests();
+if (routePtr)
+{
+  auto const & poly = routePtr->GetFollowedPolyline();
+  if (poly.IsValid())
+  {
+    m2::PointD cur = poly.GetCurrentIter().m_pt;
+
+    m2::PointD aheadPt;
+    poly.GetCurrentDirectionPoint(aheadPt, 80.0);
+
+ double const angleDeg = math::RadToDeg(ang::AngleTo(cur, aheadPt));
+roadAheadBearingDeg = location::AngleToBearing(angleDeg);
+
+  }
+}
 
   
   

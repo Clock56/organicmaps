@@ -46,6 +46,7 @@ private var speedCameraExceeded: Boolean = false
 
     private val tickRunnable = object : Runnable {
         override fun run() {
+		 //Toast.makeText(appContext, "TICK", Toast.LENGTH_SHORT).show()
             if (!running) return
 
             val loc = lastLocation
